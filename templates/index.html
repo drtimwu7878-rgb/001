@@ -98,6 +98,26 @@
     }
     textarea { resize: vertical; min-height: 72px; }
 
+    /* ── Radio group ─────────────────────────── */
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .18s, background .18s;
+      flex: 1;
+    }
+    .radio-item:hover { border-color: #6366f1; background: #f5f3ff; }
+    .radio-item input[type="radio"] { accent-color: #6366f1; width: 15px; height: 15px; }
+    .radio-item span { font-size: 0.88rem; color: #374151; }
+
     /* ── Checkbox group ───────────────────────── */
     .checkbox-grid {
       display: grid;
@@ -237,6 +257,26 @@
         </div>
       </div>
 
+      <div class="row">
+        <div class="field">
+          <label>性別</label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="farming-gender" value="男" checked />
+              <span>男生</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="farming-gender" value="女" />
+              <span>女生</span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="farming-name">學生姓名 <span style="color:#9ca3af;font-weight:400">（選填）</span></label>
+          <input type="text" id="farming-name" placeholder="例：小明" />
+        </div>
+      </div>
+
       <div class="field">
         <label for="farming-keywords">今日關鍵字</label>
         <textarea id="farming-keywords" placeholder="例：鬆土、堆壟、採收紅蘿蔔、澆液態肥"></textarea>
@@ -260,6 +300,26 @@
         <div class="field">
           <label for="tutoring-subject">科目</label>
           <input type="text" id="tutoring-subject" placeholder="例：數學、英文、國文" value="數學" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>性別</label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="tutoring-gender" value="男" checked />
+              <span>男生</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="tutoring-gender" value="女" />
+              <span>女生</span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tutoring-name">學生姓名 <span style="color:#9ca3af;font-weight:400">（選填）</span></label>
+          <input type="text" id="tutoring-name" placeholder="例：小明" />
         </div>
       </div>
 
@@ -295,6 +355,26 @@
         <div class="field">
           <label for="parent-subject">科目</label>
           <input type="text" id="parent-subject" placeholder="例：數學、英文" value="數學" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>性別</label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="parent-gender" value="男" checked />
+              <span>男生</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="parent-gender" value="女" />
+              <span>女生</span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="parent-name">學生姓名 <span style="color:#9ca3af;font-weight:400">（選填）</span></label>
+          <input type="text" id="parent-name" placeholder="例：小明" />
         </div>
       </div>
 
@@ -334,6 +414,26 @@
             <option value="{{ t }}">{{ t }}</option>
             {% endfor %}
           </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>性別</label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="school-gender" value="男" checked />
+              <span>男生</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="school-gender" value="女" />
+              <span>女生</span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="school-name">學生姓名 <span style="color:#9ca3af;font-weight:400">（選填）</span></label>
+          <input type="text" id="school-name" placeholder="例：小明" />
         </div>
       </div>
 
@@ -402,11 +502,18 @@
     }
 
     // ── Collect payload by mode ───────────────────────────────
+    function getGender(prefix) {
+      const checked = document.querySelector(`input[name="${prefix}-gender"]:checked`);
+      return checked ? checked.value : '男';
+    }
+
     function collectPayload(mode) {
       if (mode === 'farming') {
         return {
           mode,
           grade:    document.getElementById('farming-grade').value,
+          gender:   getGender('farming'),
+          name:     document.getElementById('farming-name').value.trim(),
           keywords: document.getElementById('farming-keywords').value.trim(),
         };
       }
@@ -415,6 +522,8 @@
           mode,
           grade:    document.getElementById('tutoring-grade').value,
           subject:  document.getElementById('tutoring-subject').value.trim() || '數學',
+          gender:   getGender('tutoring'),
+          name:     document.getElementById('tutoring-name').value.trim(),
           tone:     document.getElementById('tutoring-tone').value,
           keywords: document.getElementById('tutoring-keywords').value.trim(),
         };
@@ -424,6 +533,8 @@
           mode,
           grade:    document.getElementById('parent-grade').value,
           subject:  document.getElementById('parent-subject').value.trim() || '數學',
+          gender:   getGender('parent'),
+          name:     document.getElementById('parent-name').value.trim(),
           tone:     document.getElementById('parent-tone').value,
           keywords: document.getElementById('parent-keywords').value.trim(),
         };
@@ -435,6 +546,8 @@
           mode,
           grade:    document.getElementById('school-grade').value,
           tone:     document.getElementById('school-tone').value,
+          gender:   getGender('school'),
+          name:     document.getElementById('school-name').value.trim(),
           guides,
           keywords: document.getElementById('school-keywords').value.trim(),
         };

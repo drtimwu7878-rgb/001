@@ -47,10 +47,20 @@ FORBIDDEN_WORDS_NOTE = """
 """
 
 # ─────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────
+
+def _student_ref(gender: str, name: str) -> tuple:
+    pronoun = "他" if gender == "男" else "她"
+    noun = name.strip() if name and name.strip() else "小朋友"
+    return noun, pronoun
+
+
+# ─────────────────────────────────────────────────────────────
 # Prompt builders
 # ─────────────────────────────────────────────────────────────
 
-def build_farming_prompt(keywords: str, grade: str) -> str:
+def build_farming_prompt(keywords: str, grade: str, gender: str = "男", name: str = "") -> str:
     return f"""你是一位國小／國中自然科老師的文字助手，負責將農耕課關鍵字轉化為給家長看的課程側記。
 
 【年級】{grade}
@@ -88,13 +98,15 @@ def build_farming_prompt(keywords: str, grade: str) -> str:
 請根據以上關鍵字與年級，直接產出課程側記（不需要詢問細節）："""
 
 
-def build_tutoring_prompt(keywords: str, subject: str, grade: str, tone: str) -> str:
+def build_tutoring_prompt(keywords: str, subject: str, grade: str, tone: str, gender: str = "男", name: str = "") -> str:
     tone_desc = TONES.get(tone, TONES["溫暖鼓勵"])
+    noun, pronoun = _student_ref(gender, name)
     return f"""你是一位家教老師的文字助手，負責撰寫給學生的課後評語。
 
 【年級】{grade}
 【科目】{subject}
 【語氣】{tone}（{tone_desc}）
+【學生稱呼】請以「{noun}」稱呼這位學生，代名詞用「{pronoun}」
 【本次關鍵字／重點】{keywords}
 
 【格式要求】
@@ -111,13 +123,15 @@ def build_tutoring_prompt(keywords: str, subject: str, grade: str, tone: str) ->
 請直接產出評語："""
 
 
-def build_parent_report_prompt(keywords: str, subject: str, grade: str, tone: str) -> str:
+def build_parent_report_prompt(keywords: str, subject: str, grade: str, tone: str, gender: str = "男", name: str = "") -> str:
     tone_desc = TONES.get(tone, TONES["溫暖鼓勵"])
+    noun, pronoun = _student_ref(gender, name)
     return f"""你是一位家教老師的文字助手，負責撰寫給家長的學習側記（風格類似老師在家長群組的留言）。
 
 【年級】{grade}
 【科目】{subject}
 【語氣】{tone}（{tone_desc}）
+【學生稱呼】請以「{noun}」稱呼這位學生，代名詞用「{pronoun}」
 【本次關鍵字／重點】{keywords}
 
 【文章固定結構】
@@ -140,18 +154,20 @@ def build_parent_report_prompt(keywords: str, subject: str, grade: str, tone: st
 
 
 def build_school_comment_prompt(
-    keywords: str, grade: str, tone: str, guides: list
+    keywords: str, grade: str, tone: str, guides: list, gender: str = "男", name: str = ""
 ) -> str:
     tone_desc = TONES.get(tone, TONES["溫暖鼓勵"])
     guide_list = [SCHOOL_GUIDES[g] for g in guides if g in SCHOOL_GUIDES]
     guide_text = "、".join(guide_list) if guide_list else "整體學習表現"
     keywords_line = f"請自然融入以下關鍵字或概念：{keywords}\n" if keywords else ""
+    noun, pronoun = _student_ref(gender, name)
 
-    return f"""請為一位學生撰寫一段學校老師評語（學期末或聯絡簿評語）。
+    return f"""請為一位學生撰寫一段學校老師評語（學期末評語）。
 
 【年級】{grade}
 【語氣】{tone}（{tone_desc}）
 【評語重點】{guide_text}
+【學生稱呼】請以「{noun}」稱呼這位學生，代名詞用「{pronoun}」
 {keywords_line}
 【格式要求】
 - 使用繁體中文
@@ -183,11 +199,15 @@ def index():
 def generate():
     data = request.json
     mode = data.get("mode", "farming")
+    gender = data.get("gender", "男")
+    name = data.get("name", "")
 
     if mode == "farming":
         prompt = build_farming_prompt(
             keywords=data.get("keywords", ""),
             grade=data.get("grade", "國一"),
+            gender=gender,
+            name=name,
         )
     elif mode == "tutoring":
         prompt = build_tutoring_prompt(
@@ -195,6 +215,8 @@ def generate():
             subject=data.get("subject", "數學"),
             grade=data.get("grade", "國一"),
             tone=data.get("tone", "溫暖鼓勵"),
+            gender=gender,
+            name=name,
         )
     elif mode == "parent_report":
         prompt = build_parent_report_prompt(
@@ -202,6 +224,8 @@ def generate():
             subject=data.get("subject", "數學"),
             grade=data.get("grade", "國一"),
             tone=data.get("tone", "溫暖鼓勵"),
+            gender=gender,
+            name=name,
         )
     elif mode == "school_comment":
         prompt = build_school_comment_prompt(
@@ -209,6 +233,8 @@ def generate():
             grade=data.get("grade", "國一"),
             tone=data.get("tone", "溫暖鼓勵"),
             guides=data.get("guides", []),
+            gender=gender,
+            name=name,
         )
     else:
         return jsonify({"error": "未知模式"}), 400
