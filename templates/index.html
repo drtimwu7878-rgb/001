@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>老師評語生成器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    /* ── Tab bar ─────────────────────────────── */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      padding: 8px 18px;
+      border: 2px solid #cbd5e1;
+      border-radius: 999px;
+      background: #fff;
+      color: #475569;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .tab-btn:hover { border-color: #6366f1; color: #6366f1; }
+    .tab-btn.active {
+      background: #6366f1;
+      border-color: #6366f1;
+      color: #fff;
+    }
+
+    /* ── Card ────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.08);
+      padding: 28px 28px 24px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* ── Panel visibility ─────────────────────── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Form elements ────────────────────────── */
+    .field { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    select, input[type="text"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #111827;
+      background: #f9fafb;
+      transition: border-color .18s;
+      font-family: inherit;
+    }
+    select:focus, input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 72px; }
+
+    /* ── Checkbox group ───────────────────────── */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .18s, background .18s;
+    }
+    .checkbox-item:hover { border-color: #6366f1; background: #f5f3ff; }
+    .checkbox-item input[type="checkbox"] { accent-color: #6366f1; width: 16px; height: 16px; }
+    .checkbox-item span { font-size: 0.88rem; color: #374151; }
+
+    /* ── Generate button ──────────────────────── */
+    .btn-generate {
+      width: 100%;
+      padding: 13px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, transform .1s;
+      margin-top: 6px;
+    }
+    .btn-generate:hover { background: #4f46e5; }
+    .btn-generate:active { transform: scale(.98); }
+    .btn-generate:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    /* ── Output ───────────────────────────────── */
+    .output-area {
+      margin-top: 24px;
+      display: none;
+    }
+    .output-area.show { display: block; }
+
+    .output-box {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 18px;
+      white-space: pre-wrap;
+      line-height: 1.9;
+      font-size: 0.97rem;
+      color: #1e293b;
+      min-height: 80px;
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .char-count {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .btn-copy {
+      padding: 6px 14px;
+      background: #fff;
+      border: 1.5px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-copy:hover { border-color: #6366f1; color: #6366f1; }
+    .btn-copy.copied { border-color: #10b981; color: #10b981; }
+
+    /* ── Loading spinner ──────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Row layout ───────────────────────────── */
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* ── Tag hint ─────────────────────────────── */
+    .hint {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 480px) {
+      .row { grid-template-columns: 1fr; }
+      .checkbox-grid { grid-template-columns: 1fr; }
+      .card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>✏️ 老師評語生成器</h1>
+  <p class="subtitle">選擇模式 → 填入資訊 → 一鍵生成</p>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="farming">🌱 農耕側記</button>
+    <button class="tab-btn" data-tab="tutoring">📖 家教評語</button>
+    <button class="tab-btn" data-tab="parent_report">💌 家教給家長</button>
+    <button class="tab-btn" data-tab="school_comment">🏫 學校老師評語</button>
+  </div>
+
+  <div class="card">
+
+    <!-- ════ Panel 1: 農耕側記 ════ -->
+    <div id="panel-farming" class="panel active">
+      <div class="row">
+        <div class="field">
+          <label for="farming-grade">年級</label>
+          <select id="farming-grade">
+            {% for g in grades %}
+            <option value="{{ g }}" {% if g == "國一" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="farming-keywords">今日關鍵字</label>
+        <textarea id="farming-keywords" placeholder="例：鬆土、堆壟、採收紅蘿蔔、澆液態肥"></textarea>
+        <p class="hint">輸入本次農耕課的活動關鍵字，以頓號或逗號分隔</p>
+      </div>
+
+      <button class="btn-generate" id="btn-farming">生成側記</button>
+    </div>
+
+    <!-- ════ Panel 2: 家教評語（給學生）════ -->
+    <div id="panel-tutoring" class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="tutoring-grade">年級</label>
+          <select id="tutoring-grade">
+            {% for g in grades %}
+            <option value="{{ g }}" {% if g == "國一" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="tutoring-subject">科目</label>
+          <input type="text" id="tutoring-subject" placeholder="例：數學、英文、國文" value="數學" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="tutoring-tone">語氣風格</label>
+        <select id="tutoring-tone">
+          {% for t in tones %}
+          <option value="{{ t }}">{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="tutoring-keywords">本次重點關鍵字</label>
+        <textarea id="tutoring-keywords" placeholder="例：二次函數、頂點公式、解題步驟清晰"></textarea>
+        <p class="hint">輸入本次上課內容或學生表現的關鍵詞</p>
+      </div>
+
+      <button class="btn-generate" id="btn-tutoring">生成評語</button>
+    </div>
+
+    <!-- ════ Panel 3: 家教給家長 ════ -->
+    <div id="panel-parent_report" class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="parent-grade">年級</label>
+          <select id="parent-grade">
+            {% for g in grades %}
+            <option value="{{ g }}" {% if g == "國一" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="parent-subject">科目</label>
+          <input type="text" id="parent-subject" placeholder="例：數學、英文" value="數學" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="parent-tone">語氣風格</label>
+        <select id="parent-tone">
+          {% for t in tones %}
+          <option value="{{ t }}">{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="parent-keywords">本週重點關鍵字</label>
+        <textarea id="parent-keywords" placeholder="例：因式分解、練習速度提升、理解更流暢了"></textarea>
+        <p class="hint">輸入本週學習內容、進步狀況或特別值得提的事</p>
+      </div>
+
+      <button class="btn-generate" id="btn-parent_report">生成學習側記</button>
+    </div>
+
+    <!-- ════ Panel 4: 學校老師評語 ════ -->
+    <div id="panel-school_comment" class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="school-grade">年級</label>
+          <select id="school-grade">
+            {% for g in grades %}
+            <option value="{{ g }}" {% if g == "國一" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="school-tone">語氣風格</label>
+          <select id="school-tone">
+            {% for t in tones %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>評語重點 <span style="color:#9ca3af;font-weight:400">（可複選）</span></label>
+        <div class="checkbox-grid">
+          {% for g in school_guides %}
+          <label class="checkbox-item">
+            <input type="checkbox" name="school-guide" value="{{ g }}" />
+            <span>{{ g }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="school-keywords">自訂關鍵字</label>
+        <input type="text" id="school-keywords"
+               placeholder="例：閱讀表現亮眼、數學需加強、樂於助人" />
+        <p class="hint">可選填，輸入希望評語提到的具體詞彙</p>
+      </div>
+
+      <button class="btn-generate" id="btn-school_comment">生成評語</button>
+    </div>
+
+    <!-- ── 共用輸出區 ──────────────────── -->
+    <div class="output-area" id="output-area">
+      <div class="output-box" id="output-box"></div>
+      <div class="meta-bar">
+        <span class="char-count" id="char-count"></span>
+        <button class="btn-copy" id="btn-copy">複製</button>
+      </div>
+    </div>
+
+  </div><!-- .card -->
+
+  <script>
+    // ── Tab switching ────────────────────────────────────────
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels  = document.querySelectorAll('.panel');
+    let currentMode = 'farming';
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMode = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + currentMode).classList.add('active');
+        hideOutput();
+      });
+    });
+
+    // ── Output helpers ───────────────────────────────────────
+    function showOutput(text, count) {
+      const area = document.getElementById('output-area');
+      document.getElementById('output-box').textContent = text;
+      document.getElementById('char-count').textContent = `字數：${count} 字`;
+      area.classList.add('show');
+      const copyBtn = document.getElementById('btn-copy');
+      copyBtn.textContent = '複製';
+      copyBtn.classList.remove('copied');
+    }
+    function hideOutput() {
+      document.getElementById('output-area').classList.remove('show');
+    }
+
+    // ── Collect payload by mode ───────────────────────────────
+    function collectPayload(mode) {
+      if (mode === 'farming') {
+        return {
+          mode,
+          grade:    document.getElementById('farming-grade').value,
+          keywords: document.getElementById('farming-keywords').value.trim(),
+        };
+      }
+      if (mode === 'tutoring') {
+        return {
+          mode,
+          grade:    document.getElementById('tutoring-grade').value,
+          subject:  document.getElementById('tutoring-subject').value.trim() || '數學',
+          tone:     document.getElementById('tutoring-tone').value,
+          keywords: document.getElementById('tutoring-keywords').value.trim(),
+        };
+      }
+      if (mode === 'parent_report') {
+        return {
+          mode,
+          grade:    document.getElementById('parent-grade').value,
+          subject:  document.getElementById('parent-subject').value.trim() || '數學',
+          tone:     document.getElementById('parent-tone').value,
+          keywords: document.getElementById('parent-keywords').value.trim(),
+        };
+      }
+      if (mode === 'school_comment') {
+        const guides = [...document.querySelectorAll('input[name="school-guide"]:checked')]
+          .map(el => el.value);
+        return {
+          mode,
+          grade:    document.getElementById('school-grade').value,
+          tone:     document.getElementById('school-tone').value,
+          guides,
+          keywords: document.getElementById('school-keywords').value.trim(),
+        };
+      }
+    }
+
+    // ── Generate ─────────────────────────────────────────────
+    async function generate(mode) {
+      const btnId = 'btn-' + mode;
+      const btn   = document.getElementById(btnId);
+      const orig  = btn.textContent;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>生成中…';
+      hideOutput();
+
+      try {
+        const payload  = collectPayload(mode);
+        const response = await fetch('/generate', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        showOutput(data.feedback, data.char_count);
+      } catch (err) {
+        showOutput('⚠️ 發生錯誤：' + err.message, 0);
+      } finally {
+        btn.disabled  = false;
+        btn.innerHTML = orig;
+      }
+    }
+
+    ['farming', 'tutoring', 'parent_report', 'school_comment'].forEach(mode => {
+      document.getElementById('btn-' + mode).addEventListener('click', () => generate(mode));
+    });
+
+    // ── Copy ─────────────────────────────────────────────────
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      const text = document.getElementById('output-box').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = '已複製 ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '複製';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
